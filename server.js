@@ -20,24 +20,36 @@ io.on('connection', async (socket) => {
   console.log('a user connected');
 
   // Get counter if first connection
-  const currentValue = await redis.get(GLOBAL_COUNTER) || 0;
-  io.emit('update counter', parseInt(currentValue));
+  try {
+    const currentValue = await redis.get(GLOBAL_COUNTER) || 0;
+    io.emit('update counter', parseInt(currentValue));
+  } catch (err) {
+    console.error('Erreur Redis get counter value:', err);
+  }
 
   // +1
   socket.on('incr', async () => {
-    // Incr is an axtomic operation with Redis
-    const newValue = await redis.incr(GLOBAL_COUNTER);
-    io.emit('update counter', newValue);
+    try {
+      // Incr is an axtomic operation with Redis
+      const newValue = await redis.incr(GLOBAL_COUNTER);
+      io.emit('update counter', newValue);
+    } catch (err) {
+      console.error('Erreur Redis incr:', err);
+    }
   });
 
   // -1
   socket.on('decr', async () => {
-    let newValue = await redis.decr(GLOBAL_COUNTER);
-    if (newValue < 0) {
-      await redis.set(GLOBAL_COUNTER, 0);
-      newValue = 0;
+    try {
+      let newValue = await redis.decr(GLOBAL_COUNTER);
+      if (newValue < 0) {
+        await redis.set(GLOBAL_COUNTER, 0);
+        newValue = 0;
+      }
+      io.emit('update counter', newValue);
+    } catch (err) {
+      console.error('Erreur Redis decr:', err);
     }
-    io.emit('update counter', newValue);
   })
 });
 
