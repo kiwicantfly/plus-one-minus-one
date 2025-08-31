@@ -6,15 +6,32 @@ const Redis = require('ioredis');
 
 const PORT = 3000;
 const GLOBAL_COUNTER = 'global_counter';
+const BATCHING_TIMEOUT = 50; //ms
 
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
-const redis = new Redis(process.env.REDIS_URL);
+const redis = new Redis(process.env.REDIS_URL, {
+  tls: {},
+  maxRetriesPerRequest: null
+});
 
 app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'index.html'));
 });
+
+let lastValue = null;
+let broadcastTimeout = null;
+
+function broadcast(value) {
+  lastValue = value;
+  if (!broadcastTimeout) {
+    broadcastTimeout = setTimeout(() => {
+      io.emit('update counter', lastValue);
+      broadcastTimeout = null;
+    }, BATCHING_TIMEOUT);
+  }
+}
 
 io.on('connection', async (socket) => {
   console.log('a user connected');
@@ -22,7 +39,7 @@ io.on('connection', async (socket) => {
   // Get counter if first connection
   try {
     const currentValue = await redis.get(GLOBAL_COUNTER) || 0;
-    io.emit('update counter', parseInt(currentValue));
+    broadcast(parseInt(currentValue));
   } catch (err) {
     console.error('Erreur Redis get counter value:', err);
   }
@@ -32,7 +49,7 @@ io.on('connection', async (socket) => {
     try {
       // Incr is an axtomic operation with Redis
       const newValue = await redis.incr(GLOBAL_COUNTER);
-      io.emit('update counter', newValue);
+      broadcast(parseInt(newValue));
     } catch (err) {
       console.error('Erreur Redis incr:', err);
     }
@@ -46,7 +63,7 @@ io.on('connection', async (socket) => {
         await redis.set(GLOBAL_COUNTER, 0);
         newValue = 0;
       }
-      io.emit('update counter', newValue);
+      broadcast(parseInt(newValue));
     } catch (err) {
       console.error('Erreur Redis decr:', err);
     }
