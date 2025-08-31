@@ -7,6 +7,7 @@ const Redis = require('ioredis');
 const PORT = 3000;
 const GLOBAL_COUNTER = 'global_counter';
 const BATCHING_TIMEOUT = 50; //ms
+let onlineUsers = 0;
 
 const app = express();
 const server = createServer(app);
@@ -34,7 +35,15 @@ function broadcast(value) {
 }
 
 io.on('connection', async (socket) => {
-  console.log('a user connected');
+
+  // Number of 
+  onlineUsers++;
+  io.emit('update online', onlineUsers);
+
+  socket.on('disconnect', () => {
+    onlineUsers--;
+    io.emit('update online', onlineUsers); 
+  });
 
   // Get counter if first connection
   try {

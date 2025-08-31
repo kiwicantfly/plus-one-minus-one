@@ -20,11 +20,14 @@
             margin-top: 200px;
             font-size: 100px;
         }
+        #online {
+            margin-top: 20px;
+        }
         .buttonContainer {
             position: absolute;
             bottom: 0;
             width: 100%;
-            height: 256px;
+            height: 220px;
             display: flex;
             flex-direction: row;
         }
@@ -50,13 +53,14 @@
     
         @media (max-width: 767px) {
             #counter {
-                margin-top: 180px;
+                margin-top: 150px;
                 font-size: 40px;
             }
         }
     </style>
 </head>
 <body>
+    <p id="online">Online : 0</p>
     <p id="counter">0</p>
     <div class="buttonContainer">    
         <button class="button" id="btnPlus">+1</button>
@@ -69,6 +73,7 @@
         const counter = document.getElementById("counter");
         const btnPlus = document.getElementById("btnPlus");
         const btnMinus = document.getElementById("btnMinus");
+        const onlineEl = document.getElementById('online');
 
         btnPlus.addEventListener('click', () => {
             socket.emit('incr')
@@ -77,9 +82,11 @@
             socket.emit('decr')
         })
         socket.on('update counter', (GLOBAL_COUNTER) => {
-            counter.innerHTML = GLOBAL_COUNTER.toLocaleString('en-US');
+            counter.textContent = GLOBAL_COUNTER.toLocaleString('en-US');
         });
-
+        socket.on('update online', (count) => {
+            onlineEl.textContent = `Online : ${count}`;
+        });
     </script>
 </body>
 </html>
